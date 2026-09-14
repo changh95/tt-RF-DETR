@@ -393,6 +393,22 @@ unified decoder kernel (one launch per layer); it was scoped, not built.
 
 ---
 
+## Comparison with an RTX 5090 (same host, 2026-09-14)
+
+device forward, 560×560, batch 1; ratio = p150a ms / GPU ms.
+
+| setting | ms | vs p150a |
+|---|---:|---|
+| p150a, bf16 fused metal-trace (served `timing_ms.inference`) | 8.2 | — |
+| RTX 5090 fp32 strict (eager) | 8.0 | parity (1.03×) |
+| RTX 5090 bf16 autocast (eager) | 5.9 | GPU 1.4× |
+| RTX 5090 fp16 autocast (eager) | 5.9 | GPU 1.4× |
+| RTX 5090 fp16 autocast + `torch.compile` (reduce-overhead) | 2.2 | GPU 3.7× |
+
+fp32-strict eager GPU is at parity with the p150a; the GPU's advantage needs bf16/fp16 (1.4×) or CUDA graphs (3.7×).
+
+Methodology: same host, this repo's torch reference (same weights and preprocessing as the served p150a path) run eagerly in PyTorch 2.11 cu128 (fp32 weights + `torch.autocast` unless stated; no TensorRT), batch 1, medians of 50 iterations after warm-up, H2D/D2H included; GPU fp32 output matches the CPU fp32 reference (PCC 1.0). p150a rows are the served bf16 fused path incl. upload/readback. p150a power was not measured, so no efficiency comparison is made. Full per-precision table, power and memory: [`GPU_COMPARISON.md`](GPU_COMPARISON.md).
+
 ## License
 
 Apache 2.0 (matches the upstream RF-DETR, DINOv2, and tt-metal licenses).
